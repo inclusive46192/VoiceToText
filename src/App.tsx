@@ -28,13 +28,15 @@ const copy = {
     replace: 'Ersetzen',
     reading: 'Audio wird gelesen ...',
     audioFallback: 'Dein Browser unterstützt die Audiowiedergabe nicht.',
-    transcriptionLanguage: 'Sprache der Transkription',
+    transcriptionLanguage: 'Audiosprache (Hinweis für das Modell)',
     detect: 'Automatisch erkennen',
     english: 'Englisch',
     german: 'Deutsch',
     french: 'Französisch',
     spanish: 'Spanisch',
     italian: 'Italienisch',
+    translateToggle: 'Ins Englische übersetzen',
+    translateHint: 'Standardmäßig bleibt das Transkript in der Originalsprache.',
     modelNote: 'Die erste Nutzung lädt ein Modell und kann etwas dauern.',
     transcribe: 'Audio transkribieren',
     working: 'Wird verarbeitet ...',
@@ -73,13 +75,15 @@ const copy = {
     replace: 'Replace',
     reading: 'Reading audio...',
     audioFallback: 'Your browser does not support audio playback.',
-    transcriptionLanguage: 'Transcription language',
+    transcriptionLanguage: 'Audio language (hint for the model)',
     detect: 'Detect automatically',
     english: 'English',
     german: 'German',
     french: 'French',
     spanish: 'Spanish',
     italian: 'Italian',
+    translateToggle: 'Translate to English',
+    translateHint: 'By default, the transcript stays in the original language.',
     modelNote: 'First use downloads a model and may take a moment.',
     transcribe: 'Transcribe audio',
     working: 'Working...',
@@ -127,6 +131,7 @@ function App() {
   const [transcript, setTranscript] = useState('')
   const [summary, setSummary] = useState<Summary | null>(null)
   const [language, setLanguage] = useState('auto')
+  const [translate, setTranslate] = useState(false)
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const workerRef = useRef<Worker | null>(null)
@@ -226,7 +231,7 @@ function App() {
       setStage('error')
       worker.terminate()
     }
-    worker.postMessage({ type: 'transcribe', samples, language, uiLanguage }, [samples.buffer])
+    worker.postMessage({ type: 'transcribe', samples, language, uiLanguage, translate }, [samples.buffer])
   }
 
   const reset = async () => {
@@ -270,7 +275,11 @@ function App() {
       {audioUrl && <audio className="audio-player" controls src={audioUrl}>{t.audioFallback}</audio>}
       <div className="controls">
         <label>{t.transcriptionLanguage}<select value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isWorking}><option value="auto">{t.detect}</option><option value="en">{t.english}</option><option value="de">{t.german}</option><option value="fr">{t.french}</option><option value="es">{t.spanish}</option><option value="it">{t.italian}</option></select></label>
-        <div className="model-note"><strong>Browser Whisper</strong><span>{t.modelNote}</span></div>
+        <label className="checkbox-field">
+          <input type="checkbox" checked={translate} onChange={(event) => setTranslate(event.target.checked)} disabled={isWorking} />
+          {t.translateToggle}
+        </label>
+        <div className="model-note"><strong>Browser Whisper</strong><span>{t.modelNote} {t.translateHint}</span></div>
         <button className="primary-button" type="button" disabled={!canTranscribe} onClick={() => void transcribe()}>{isWorking ? t.working : t.transcribe}</button>
       </div>
       {(stage !== 'empty' || error) && <div className={`status ${stage === 'error' ? 'status-error' : ''}`} role="status"><span className={isWorking ? 'spinner' : 'status-indicator'} />{error ?? statusMessage}</div>}

@@ -5,6 +5,7 @@ type TranscriptionRequest = {
   samples: Float32Array
   language: string
   uiLanguage: 'de' | 'en'
+  translate: boolean
 }
 
 type TranscriptionResult = { text?: unknown }
@@ -31,6 +32,7 @@ self.onmessage = async (event: MessageEvent<TranscriptionRequest>) => {
     postProgress(german ? 'Transkription läuft lokal in deinem Browser ...' : 'Transcribing locally in your browser...')
     const result = await transcriber(samples, {
       language: event.data.language === 'auto' ? undefined : event.data.language,
+      task: event.data.translate ? 'translate' : 'transcribe',
       return_timestamps: true,
       chunk_length_s: 30,
       stride_length_s: 5,
