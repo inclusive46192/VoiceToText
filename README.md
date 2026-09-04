@@ -2,12 +2,15 @@
 
 A privacy-first, static web app for turning voice notes into editable transcripts and local summaries.
 
+**Live app:** https://inclusive46192.github.io/VoiceToText/
+
 ## What it does
 
 - Accepts common audio formats, including WhatsApp-compatible OGG and OPUS files.
 - Plays the selected audio before transcription.
 - Runs Whisper in the browser using Transformers.js; audio is not sent to an application server.
 - Provides an editable transcript, a lightweight local summary, export, clipboard copy, and browser-local restoration of the latest transcript.
+- Interface defaults to German, with a persistent toggle to switch to English.
 - Runs as a static Vite build suitable for GitHub Pages.
 
 ## Run locally
