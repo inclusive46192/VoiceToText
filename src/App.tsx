@@ -46,7 +46,10 @@ const copy = {
     polish: 'Polnisch',
     czech: 'Tschechisch',
     ukrainian: 'Ukrainisch',
-    translateToggle: 'Ins Englische übersetzen',
+    translateToggle: 'Übersetzen',
+    translateNone: 'Keine Übersetzung (Originalsprache)',
+    translateToEnglish: 'Ins Englische übersetzen',
+    translateToGerman: 'Ins Deutsche übersetzen',
     translateHint: 'Standardmäßig bleibt das Transkript in der Originalsprache.',
     modelNote: 'Die erste Nutzung lädt ein Modell und kann etwas dauern.',
     transcribe: 'Audio transkribieren',
@@ -104,7 +107,10 @@ const copy = {
     polish: 'Polish',
     czech: 'Czech',
     ukrainian: 'Ukrainian',
-    translateToggle: 'Translate to English',
+    translateToggle: 'Translate',
+    translateNone: 'No translation (original language)',
+    translateToEnglish: 'Translate to English',
+    translateToGerman: 'Translate to German',
     translateHint: 'By default, the transcript stays in the original language.',
     modelNote: 'First use downloads a model and may take a moment.',
     transcribe: 'Transcribe audio',
@@ -153,7 +159,7 @@ function App() {
   const [transcript, setTranscript] = useState('')
   const [summary, setSummary] = useState<Summary | null>(null)
   const [language, setLanguage] = useState('auto')
-  const [translate, setTranslate] = useState(false)
+  const [translateTo, setTranslateTo] = useState<'none' | 'en' | 'de'>('none')
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const workerRef = useRef<Worker | null>(null)
@@ -296,7 +302,7 @@ function App() {
       setStage('error')
       worker.terminate()
     }
-    worker.postMessage({ type: 'transcribe', samples, language, uiLanguage, translate }, [samples.buffer])
+    worker.postMessage({ type: 'transcribe', samples, language, uiLanguage, translateTo }, [samples.buffer])
   }
 
   const reset = async () => {
@@ -343,10 +349,7 @@ function App() {
       {audioUrl && <audio className="audio-player" controls src={audioUrl}>{t.audioFallback}</audio>}
       <div className="controls">
         <label>{t.transcriptionLanguage}<select value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isWorking}><option value="auto">{t.detect}</option><option value="en">{t.english}</option><option value="de">{t.german}</option><option value="fr">{t.french}</option><option value="es">{t.spanish}</option><option value="it">{t.italian}</option><option value="ru">{t.russian}</option><option value="pl">{t.polish}</option><option value="cs">{t.czech}</option><option value="uk">{t.ukrainian}</option></select></label>
-        <label className="checkbox-field">
-          <input type="checkbox" checked={translate} onChange={(event) => setTranslate(event.target.checked)} disabled={isWorking} />
-          {t.translateToggle}
-        </label>
+        <label>{t.translateToggle}<select value={translateTo} onChange={(event) => setTranslateTo(event.target.value as 'none' | 'en' | 'de')} disabled={isWorking}><option value="none">{t.translateNone}</option><option value="en">{t.translateToEnglish}</option><option value="de">{t.translateToGerman}</option></select></label>
         <div className="model-note"><strong>Browser Whisper</strong><span>{t.modelNote} {t.translateHint}</span></div>
         <button className="primary-button" type="button" disabled={!canTranscribe} onClick={() => void transcribe()}>{isWorking ? t.working : t.transcribe}</button>
       </div>
