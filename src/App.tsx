@@ -35,6 +35,10 @@ const copy = {
     french: 'Französisch',
     spanish: 'Spanisch',
     italian: 'Italienisch',
+    russian: 'Russisch',
+    polish: 'Polnisch',
+    czech: 'Tschechisch',
+    ukrainian: 'Ukrainisch',
     translateToggle: 'Ins Englische übersetzen',
     translateHint: 'Standardmäßig bleibt das Transkript in der Originalsprache.',
     modelNote: 'Die erste Nutzung lädt ein Modell und kann etwas dauern.',
@@ -82,6 +86,10 @@ const copy = {
     french: 'French',
     spanish: 'Spanish',
     italian: 'Italian',
+    russian: 'Russian',
+    polish: 'Polish',
+    czech: 'Czech',
+    ukrainian: 'Ukrainian',
     translateToggle: 'Translate to English',
     translateHint: 'By default, the transcript stays in the original language.',
     modelNote: 'First use downloads a model and may take a moment.',
@@ -274,7 +282,7 @@ function App() {
       </div>
       {audioUrl && <audio className="audio-player" controls src={audioUrl}>{t.audioFallback}</audio>}
       <div className="controls">
-        <label>{t.transcriptionLanguage}<select value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isWorking}><option value="auto">{t.detect}</option><option value="en">{t.english}</option><option value="de">{t.german}</option><option value="fr">{t.french}</option><option value="es">{t.spanish}</option><option value="it">{t.italian}</option></select></label>
+        <label>{t.transcriptionLanguage}<select value={language} onChange={(event) => setLanguage(event.target.value)} disabled={isWorking}><option value="auto">{t.detect}</option><option value="en">{t.english}</option><option value="de">{t.german}</option><option value="fr">{t.french}</option><option value="es">{t.spanish}</option><option value="it">{t.italian}</option><option value="ru">{t.russian}</option><option value="pl">{t.polish}</option><option value="cs">{t.czech}</option><option value="uk">{t.ukrainian}</option></select></label>
         <label className="checkbox-field">
           <input type="checkbox" checked={translate} onChange={(event) => setTranslate(event.target.checked)} disabled={isWorking} />
           {t.translateToggle}
