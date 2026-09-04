@@ -2,7 +2,7 @@ import { env, pipeline } from '@huggingface/transformers'
 
 type TranscriptionRequest = {
   type: 'transcribe'
-  audio: ArrayBuffer
+  samples: Float32Array
   language: string
   uiLanguage: 'de' | 'en'
 }
@@ -15,27 +15,16 @@ function postProgress(message: string) {
   postMessage({ type: 'progress', message })
 }
 
-async function decodeToMonoSamples(buffer: ArrayBuffer): Promise<Float32Array> {
-  const audioContext = new OfflineAudioContext(1, 1, 16_000)
-  const decoded = await audioContext.decodeAudioData(buffer)
-  const targetLength = Math.ceil(decoded.duration * 16_000)
-  const renderer = new OfflineAudioContext(1, targetLength, 16_000)
-  const source = renderer.createBufferSource()
-  source.buffer = decoded
-  source.connect(renderer.destination)
-  source.start()
-  const rendered = await renderer.startRendering()
-  return rendered.getChannelData(0)
-}
-
 self.onmessage = async (event: MessageEvent<TranscriptionRequest>) => {
   try {
     const german = event.data.uiLanguage === 'de'
-    postProgress(german ? 'Audio wird für die lokale Transkription vorbereitet ...' : 'Preparing audio for local transcription...')
-    const samples = await decodeToMonoSamples(event.data.audio)
     postProgress(german ? 'Das lokale Whisper-Modell wird heruntergeladen (nur bei der ersten Nutzung) ...' : 'Downloading the on-device Whisper model (first use only)...')
+    const samples = event.data.samples
     const transcriber = await pipeline('automatic-speech-recognition', 'onnx-community/whisper-base', {
-      dtype: 'q8',
+      dtype: {
+        encoder_model: 'fp32',
+        decoder_model_merged: 'q4',
+      },
       progress_callback: () => postProgress(german ? 'Das lokale Whisper-Modell wird geladen ...' : 'Loading the on-device Whisper model...'),
     })
 

@@ -68,3 +68,19 @@ function formatFileSize(bytes: number): string {
 
   return `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`
 }
+
+// Web workers do not expose the Web Audio API, so decoding must happen on the
+// main thread. The resulting mono 16kHz samples are then transferred to the
+// transcription worker.
+export async function decodeToMonoSamples(buffer: ArrayBuffer): Promise<Float32Array> {
+  const probe = new OfflineAudioContext(1, 1, 16_000)
+  const decoded = await probe.decodeAudioData(buffer)
+  const targetLength = Math.ceil(decoded.duration * 16_000)
+  const renderer = new OfflineAudioContext(1, targetLength, 16_000)
+  const source = renderer.createBufferSource()
+  source.buffer = decoded
+  source.connect(renderer.destination)
+  source.start()
+  const rendered = await renderer.startRendering()
+  return rendered.getChannelData(0)
+}

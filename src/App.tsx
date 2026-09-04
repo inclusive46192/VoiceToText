@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import { formatDuration, getAudioMetadata, validateAudioFile, type AudioMetadata } from './audio'
+import { decodeToMonoSamples, formatDuration, getAudioMetadata, validateAudioFile, type AudioMetadata } from './audio'
 import { buildSummary, type Summary } from './summary'
 import { clearSavedSession, loadSavedSession, saveSession } from './storage'
 
@@ -192,6 +192,17 @@ function App() {
     setError(null)
     setStage('loading-model')
     setStatusMessage(t.preparing)
+
+    let samples: Float32Array
+    try {
+      const buffer = await file.arrayBuffer()
+      samples = await decodeToMonoSamples(buffer)
+    } catch {
+      setError(t.unreadable)
+      setStage('error')
+      return
+    }
+
     const worker = new Worker(new URL('./transcription.worker.ts', import.meta.url), { type: 'module' })
     workerRef.current?.terminate()
     workerRef.current = worker
@@ -215,8 +226,7 @@ function App() {
       setStage('error')
       worker.terminate()
     }
-    const buffer = await file.arrayBuffer()
-    worker.postMessage({ type: 'transcribe', audio: buffer, language, uiLanguage }, [buffer])
+    worker.postMessage({ type: 'transcribe', samples, language, uiLanguage }, [samples.buffer])
   }
 
   const reset = async () => {
