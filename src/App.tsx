@@ -25,6 +25,13 @@ const copy = {
     choose: 'Audiodatei auswählen',
     or: 'oder eine Datei von deinem Gerät auswählen',
     formats: 'MP3, M4A, WAV, OGG, OPUS, WebM · bis zu 200 MB',
+    record: 'Aufnahme starten',
+    stopRecording: 'Aufnahme beenden',
+    recording: 'Aufnahme läuft ...',
+    recordingSaved: 'Aufnahme gespeichert.',
+    micDenied: 'Zugriff auf das Mikrofon wurde verweigert oder ist nicht verfügbar.',
+    micUnsupported: 'Dein Browser unterstützt keine Audioaufnahme.',
+    recordedFileName: 'aufnahme.webm',
     replace: 'Ersetzen',
     reading: 'Audio wird gelesen ...',
     audioFallback: 'Dein Browser unterstützt die Audiowiedergabe nicht.',
@@ -76,6 +83,13 @@ const copy = {
     choose: 'Choose audio file',
     or: 'or choose a file from your device',
     formats: 'MP3, M4A, WAV, OGG, OPUS, WebM · up to 200 MB',
+    record: 'Start recording',
+    stopRecording: 'Stop recording',
+    recording: 'Recording...',
+    recordingSaved: 'Recording saved.',
+    micDenied: 'Microphone access was denied or is unavailable.',
+    micUnsupported: 'Your browser does not support audio recording.',
+    recordedFileName: 'recording.webm',
     replace: 'Replace',
     reading: 'Reading audio...',
     audioFallback: 'Your browser does not support audio playback.',
@@ -143,6 +157,9 @@ function App() {
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const workerRef = useRef<Worker | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
+  const [isRecording, setIsRecording] = useState(false)
   const t = copy[uiLanguage]
 
   useEffect(() => {
@@ -157,7 +174,10 @@ function App() {
       }
     }
     void restore()
-    return () => workerRef.current?.terminate()
+    return () => {
+      workerRef.current?.terminate()
+      mediaRecorderRef.current?.stop()
+    }
   }, [])
 
   const changeUiLanguage = (nextLanguage: UiLanguage) => {
@@ -198,6 +218,43 @@ function App() {
       setError(t.unreadable)
       setStage('error')
     }
+  }
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError(t.micUnsupported)
+      setStage('error')
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : ''
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+      recordedChunksRef.current = []
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordedChunksRef.current.push(event.data)
+      }
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop())
+        const blob = new Blob(recordedChunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+        const recordedFile = new File([blob], t.recordedFileName, { type: blob.type })
+        setIsRecording(false)
+        void chooseFile(recordedFile)
+      }
+      mediaRecorderRef.current = recorder
+      recorder.start()
+      setIsRecording(true)
+      setError(null)
+      setStage('ready')
+      setStatusMessage(t.recording)
+    } catch {
+      setError(t.micDenied)
+      setStage('error')
+    }
+  }
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop()
   }
 
   const transcribe = async () => {
@@ -244,6 +301,7 @@ function App() {
 
   const reset = async () => {
     workerRef.current?.terminate()
+    if (isRecording) mediaRecorderRef.current?.stop()
     setFile(null); setMetadata(null); setAudioUrl(null); setTranscript(''); setSummary(null); setError(null)
     setStage('empty'); setStatusMessage(t.initial)
     await clearSavedSession()
@@ -275,10 +333,12 @@ function App() {
       <p className="hero-copy">{t.hero}</p>
     </header>
     <section className="workspace" aria-label={t.workspace}>
-      <div className={`drop-zone ${file ? 'has-file' : ''}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void chooseFile(event.dataTransfer.files.item(0) ?? undefined) }}>
+      <div className={`drop-zone ${file ? 'has-file' : ''} ${isRecording ? 'is-recording' : ''}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void chooseFile(event.dataTransfer.files.item(0) ?? undefined) }}>
         <input ref={fileInputRef} className="visually-hidden" type="file" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.webm" onChange={(event) => void chooseFile(event.target.files?.item(0) ?? undefined)} />
-        {file ? <div className="file-ready"><div className="audio-mark" aria-hidden="true">♪</div><div><strong>{file.name}</strong><span>{metadata ? `${formatDuration(metadata.duration)} · ${metadata.sizeLabel}` : t.reading}</span></div><button className="text-button" type="button" onClick={() => fileInputRef.current?.click()}>{t.replace}</button></div>
-          : <><div className="upload-icon" aria-hidden="true">↑</div><h2>{t.drop}</h2><p>{t.or}</p><button className="secondary-button" type="button" onClick={() => fileInputRef.current?.click()}>{t.choose}</button><small>{t.formats}</small></>}
+        {isRecording
+          ? <div className="file-ready"><div className="audio-mark recording-mark" aria-hidden="true">●</div><div><strong>{t.recording}</strong></div><button className="secondary-button" type="button" onClick={stopRecording}>{t.stopRecording}</button></div>
+          : file ? <div className="file-ready"><div className="audio-mark" aria-hidden="true">♪</div><div><strong>{file.name}</strong><span>{metadata ? `${formatDuration(metadata.duration)} · ${metadata.sizeLabel}` : t.reading}</span></div><button className="text-button" type="button" onClick={() => fileInputRef.current?.click()}>{t.replace}</button></div>
+          : <><div className="upload-icon" aria-hidden="true">↑</div><h2>{t.drop}</h2><p>{t.or}</p><div className="upload-actions"><button className="secondary-button" type="button" onClick={() => fileInputRef.current?.click()}>{t.choose}</button><button className="secondary-button" type="button" onClick={() => void startRecording()}>{t.record}</button></div><small>{t.formats}</small></>}
       </div>
       {audioUrl && <audio className="audio-player" controls src={audioUrl}>{t.audioFallback}</audio>}
       <div className="controls">
